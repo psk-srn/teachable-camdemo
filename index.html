@@ -2,39 +2,31 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Teachable Machine - เลือกกล้อง</title>
+  <title>Teachable Machine - กล้องหน้า/หลัง</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+  <style>
+    video { width: 224px; height: 224px; }
+  </style>
 </head>
 <body>
-  <h1>ทดสอบ AI จำแนกรูปภาพผ่านกล้อง</h1>
+  <h2>Teachable Machine: สลับกล้องได้จริง</h2>
 
-  <button onclick="switchCamera()">สลับกล้อง</button>
-  <button onclick="init()">เริ่มใช้งาน</button>
+  <button onclick="switchCamera()">🔄 สลับกล้อง</button>
+  <button onclick="start()">▶️ เริ่มกล้อง</button>
+  <br><br>
 
-  <div id="webcam-container"></div>
+  <video id="video" autoplay muted playsinline></video>
   <div id="label-container"></div>
 
   <script>
     const MODEL_URL = "https://teachablemachine.withgoogle.com/models/4J75v0Ttn/";
-    let model, webcam, labelContainer, maxPredictions;
-    let facingMode = "user"; // เริ่มต้นด้วยกล้องหน้า
+    let model, video, labelContainer, maxPredictions;
+    let currentFacingMode = "user"; // เริ่มจากกล้องหน้า
 
-    async function init() {
-      const modelURL = MODEL_URL + "model.json";
-      const metadataURL = MODEL_URL + "metadata.json";
-
-      model = await tmImage.load(modelURL, metadataURL);
+    async function loadModel() {
+      model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
       maxPredictions = model.getTotalClasses();
-
-      webcam = new tmImage.Webcam(224, 224, true);
-      await webcam.setup({ video: { facingMode: { exact: facingMode } } });
-      await webcam.play();
-      window.requestAnimationFrame(loop);
-
-      document.getElementById("webcam-container").innerHTML = "";
-      document.getElementById("webcam-container").appendChild(webcam.canvas);
-
       labelContainer = document.getElementById("label-container");
       labelContainer.innerHTML = "";
       for (let i = 0; i < maxPredictions; i++) {
@@ -42,28 +34,48 @@
       }
     }
 
-    async function loop() {
-      webcam.update();
-      await predict();
-      window.requestAnimationFrame(loop);
+    async function startCamera() {
+      if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
+      }
+
+      const constraints = {
+        audio: false,
+        video: {
+          facingMode: currentFacingMode // "user" หรือ "environment"
+        }
+      };
+
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+      video.onloadedmetadata = () => {
+        video.play();
+        predictLoop(); // เริ่มทำนาย
+      };
     }
 
-    async function predict() {
-      const prediction = await model.predict(webcam.canvas);
+    async function predictLoop() {
+      if (!model) return;
+      const prediction = await model.predict(video);
       for (let i = 0; i < maxPredictions; i++) {
-        const classPrediction = prediction[i].className + ": " +
-              (prediction[i].probability * 100).toFixed(2) + "%";
-        labelContainer.childNodes[i].innerHTML = classPrediction;
+        const p = prediction[i];
+        labelContainer.childNodes[i].innerText = `${p.className}: ${(p.probability * 100).toFixed(2)}%`;
       }
+      requestAnimationFrame(predictLoop);
+    }
+
+    async function start() {
+      await loadModel();
+      await startCamera();
     }
 
     function switchCamera() {
-      facingMode = facingMode === "user" ? "environment" : "user";
-      if (webcam) {
-        webcam.stop();
-      }
-      init();
+      currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+      startCamera(); // รีสตาร์ทกล้องด้วย mode ใหม่
     }
+
+    // เตรียม video tag
+    video = document.getElementById("video");
   </script>
 </body>
 </html>
