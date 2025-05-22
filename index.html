@@ -1,91 +1,85 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Teachable Machine Demo</title>
-
-  <!-- ✅ โหลดไลบรารี TensorFlow.js (ช่วยให้เว็บใช้ AI ได้) -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-
-  <!-- ✅ โหลดไลบรารี Teachable Machine (สำหรับการใช้โมเดลภาพ) -->
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
-</head>
 <body>
-  <!-- หัวข้อแสดงบนหน้าเว็บ -->
-  <h1>ทดสอบโมเดลจาก Teachable Machine</h1>
+  <h1>เลือกกล้องที่ต้องการ</h1>
 
-  <!-- ปุ่มเริ่มใช้งานโมเดลและกล้อง -->
+  <!-- 🔽 เมนูให้ผู้ใช้เลือกกล้อง -->
+  <select id="cameraSelect"></select>
   <button onclick="init()">เริ่มใช้งาน</button>
 
-  <!-- จุดสำหรับแสดงกล้อง -->
+  <!-- ✅ จุดแสดงภาพจากกล้อง -->
   <div id="webcam-container"></div>
-
-  <!-- จุดสำหรับแสดงผลลัพธ์ที่โมเดลจำแนกได้ -->
   <div id="label-container"></div>
 
   <script>
-    // ✅ ใส่ URL ของโมเดลที่ได้จาก Teachable Machine
-    const URL = "https://teachablemachine.withgoogle.com/models/4J75v0Ttn/";
-
-    // ตัวแปรหลักที่ใช้ในการทำงานของโมเดลและกล้อง
+    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/_5zXUWw_x/";
     let model, webcam, labelContainer, maxPredictions;
+    let selectedDeviceId = null; // กล้องที่ผู้ใช้เลือก
 
-    // 🔁 ฟังก์ชันเริ่มต้นเมื่อกดปุ่ม “เริ่มใช้งาน”
+    // ✅ โหลดรายการกล้องที่มีอยู่
+    async function loadCameraOptions() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const videoDevices = devices.filter(device => device.kind === "videoinput");
+
+      const select = document.getElementById("cameraSelect");
+      videoDevices.forEach(device => {
+        const option = document.createElement("option");
+        option.value = device.deviceId;
+        option.text = device.label || `กล้อง ${select.length + 1}`;
+        select.appendChild(option);
+      });
+
+      // ตั้งกล้องตัวแรกเป็นค่าเริ่มต้น
+      if (videoDevices.length > 0) {
+        selectedDeviceId = videoDevices[0].deviceId;
+        select.value = selectedDeviceId;
+      }
+
+      // เมื่อผู้ใช้เปลี่ยนกล้อง
+      select.onchange = () => {
+        selectedDeviceId = select.value;
+      };
+    }
+
+    // ✅ เรียกใช้เมื่อกด “เริ่มใช้งาน”
     async function init() {
-      // 🔗 เตรียมลิงก์ไฟล์ model.json และ metadata.json ของโมเดล
-      const modelURL = URL + "model.json";
-      const metadataURL = URL + "metadata.json";
+      const modelURL = MODEL_URL + "model.json";
+      const metadataURL = MODEL_URL + "metadata.json";
 
-      // ✅ โหลดโมเดลจาก URL
       model = await tmImage.load(modelURL, metadataURL);
-
-      // บอกจำนวนคลาสทั้งหมดในโมเดล (เช่น กำหนดไว้ว่าแยกได้ 3 อย่าง)
       maxPredictions = model.getTotalClasses();
 
-      // ✅ สร้างกล้องขนาด 224x224 (พร้อมเปิดการหมุนภาพแนวนอน)
-      webcam = new tmImage.Webcam(224, 224, true);
-
-      // ขอสิทธิ์เปิดกล้องจากผู้ใช้
-      await webcam.setup();
-
-      // เริ่มแสดงภาพจากกล้อง
+      // ✅ ตั้งค่ากล้องตาม deviceId ที่เลือก
+      const flip = true;
+      webcam = new tmImage.Webcam(224, 224, flip);
+      await webcam.setup({ video: { deviceId: selectedDeviceId } }); // เลือกกล้อง
       await webcam.play();
-
-      // เรียกฟังก์ชัน loop ให้ทำงานวนเรื่อย ๆ
       window.requestAnimationFrame(loop);
 
-      // นำกล้องมาแสดงในหน้าเว็บ (ใน div id="webcam-container")
+      document.getElementById("webcam-container").innerHTML = ""; // ล้างของเก่า
       document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-      // เตรียมพื้นที่สำหรับแสดงผลลัพธ์ของโมเดล
       labelContainer = document.getElementById("label-container");
+      labelContainer.innerHTML = "";
       for (let i = 0; i < maxPredictions; i++) {
         labelContainer.appendChild(document.createElement("div"));
       }
     }
 
-    // 🔁 ฟังก์ชัน loop สำหรับอัปเดตกล้องและทำนายซ้ำ
     async function loop() {
-      webcam.update();     // อัปเดตภาพจากกล้อง
-      await predict();     // ทำนายภาพจากกล้อง
-      window.requestAnimationFrame(loop); // เรียก loop นี้ซ้ำตลอดเวลา
+      webcam.update();
+      await predict();
+      window.requestAnimationFrame(loop);
     }
 
-    // 📊 ฟังก์ชันสำหรับทำนายผลจากภาพกล้อง
     async function predict() {
-      // ส่งภาพเข้าโมเดลแล้วรับผลลัพธ์
       const prediction = await model.predict(webcam.canvas);
-
-      // วนลูปแสดงผลของแต่ละคลาส
       for (let i = 0; i < maxPredictions; i++) {
-        // สร้างข้อความเช่น “มือซ้าย : 95.32%”
-        const classPrediction = prediction[i].className + ": " + 
+        const classPrediction = prediction[i].className + ": " +
               (prediction[i].probability * 100).toFixed(2) + "%";
-
-        // แสดงผลใน label-container
         labelContainer.childNodes[i].innerHTML = classPrediction;
       }
     }
+
+    // เรียกเมื่อโหลดหน้าเว็บ เพื่อโหลดกล้องทั้งหมด
+    window.onload = loadCameraOptions;
   </script>
 </body>
-</html>
