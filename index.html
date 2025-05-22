@@ -1,20 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Teachable Machine - Camera Demo</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
+</head>
 <body>
   <h1>เลือกกล้องที่ต้องการ</h1>
-
-  <!-- 🔽 เมนูให้ผู้ใช้เลือกกล้อง -->
   <select id="cameraSelect"></select>
   <button onclick="init()">เริ่มใช้งาน</button>
-
-  <!-- ✅ จุดแสดงภาพจากกล้อง -->
   <div id="webcam-container"></div>
   <div id="label-container"></div>
 
   <script>
     const MODEL_URL = "https://teachablemachine.withgoogle.com/models/_5zXUWw_x/";
     let model, webcam, labelContainer, maxPredictions;
-    let selectedDeviceId = null; // กล้องที่ผู้ใช้เลือก
+    let selectedDeviceId = null;
 
-    // ✅ โหลดรายการกล้องที่มีอยู่
+    // โหลดรายการกล้องที่มีอยู่
     async function loadCameraOptions() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const videoDevices = devices.filter(device => device.kind === "videoinput");
@@ -27,19 +31,17 @@
         select.appendChild(option);
       });
 
-      // ตั้งกล้องตัวแรกเป็นค่าเริ่มต้น
       if (videoDevices.length > 0) {
         selectedDeviceId = videoDevices[0].deviceId;
         select.value = selectedDeviceId;
       }
 
-      // เมื่อผู้ใช้เปลี่ยนกล้อง
       select.onchange = () => {
         selectedDeviceId = select.value;
       };
     }
 
-    // ✅ เรียกใช้เมื่อกด “เริ่มใช้งาน”
+    // เริ่มใช้งานกล้องและโมเดล
     async function init() {
       const modelURL = MODEL_URL + "model.json";
       const metadataURL = MODEL_URL + "metadata.json";
@@ -47,21 +49,21 @@
       model = await tmImage.load(modelURL, metadataURL);
       maxPredictions = model.getTotalClasses();
 
-      // ✅ ตั้งค่ากล้องตาม deviceId ที่เลือก
-      const flip = true;
-      webcam = new tmImage.Webcam(224, 224, flip);
-      await webcam.setup({ video: { deviceId: selectedDeviceId } }); // เลือกกล้อง
+      webcam = new tmImage.Webcam(224, 224, true);
+      await webcam.setup({ video: { deviceId: { exact: selectedDeviceId } } });
       await webcam.play();
-      window.requestAnimationFrame(loop);
 
-      document.getElementById("webcam-container").innerHTML = ""; // ล้างของเก่า
+      document.getElementById("webcam-container").innerHTML = "";
       document.getElementById("webcam-container").appendChild(webcam.canvas);
+      webcam.canvas.style.display = "block";
 
       labelContainer = document.getElementById("label-container");
       labelContainer.innerHTML = "";
       for (let i = 0; i < maxPredictions; i++) {
         labelContainer.appendChild(document.createElement("div"));
       }
+
+      window.requestAnimationFrame(loop);
     }
 
     async function loop() {
@@ -79,7 +81,8 @@
       }
     }
 
-    // เรียกเมื่อโหลดหน้าเว็บ เพื่อโหลดกล้องทั้งหมด
+    // โหลดรายการกล้องเมื่อหน้าเว็บโหลด
     window.onload = loadCameraOptions;
   </script>
 </body>
+</html>
