@@ -1,44 +1,32 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Teachable Machine Demo</title>
-  <!-- โหลดไลบรารี TensorFlow.js -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <!-- โหลดไลบรารี Teachable Machine Image -->
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
-</head>
 <body>
   <h1>ทดสอบโมเดลจาก Teachable Machine</h1>
   <button onclick="init()">เริ่มใช้งาน</button>
-  <div><video id="webcam" autoplay width="224" height="224"></video></div>
+
+  <!-- เปลี่ยนตรงนี้ -->
+  <div id="webcam-container"></div>
   <div id="label-container"></div>
 
-  <script type="text/javascript">
+  <script>
     const URL = "https://teachablemachine.withgoogle.com/models/_5zXUWw_x/";
     let model, webcam, labelContainer, maxPredictions;
 
     async function init() {
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
 
-      try {
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+      webcam = new tmImage.Webcam(224, 224, true);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
 
-        webcam = new tmImage.Webcam(224, 224, true);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+      // ✅ แสดงกล้องตรงนี้
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
 
-        document.getElementById("webcam").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) {
-          labelContainer.appendChild(document.createElement("div"));
-        }
-      } catch (err) {
-        console.error("เกิดข้อผิดพลาด:", err);
-        alert("เกิดข้อผิดพลาด: " + err.message);
+      labelContainer = document.getElementById("label-container");
+      for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
       }
     }
 
@@ -58,4 +46,3 @@
     }
   </script>
 </body>
-</html>
