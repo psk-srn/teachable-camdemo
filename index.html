@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <title>Teachable Machine Demo</title>
-  <!-- โหลดไลบรารี TensorFlow.js -->
+
+  <!-- ✅ โหลดไลบรารีที่จำเป็น -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-  <!-- โหลดไลบรารี Teachable Machine Image -->
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.4/dist/teachablemachine-image.min.js"></script>
 </head>
 <body>
-  <h1>ทดสอบโมเดลจาก Teachable Machine</h1>
+  <h1>Teachable Machine Demo</h1>
   <button onclick="init()">เริ่มใช้งาน</button>
   <div id="webcam-container"></div>
   <div id="label-container"></div>
 
-  <script type="text/javascript">
+  <!-- ✅ โค้ดหลัก -->
+  <script>
     const URL = "https://teachablemachine.withgoogle.com/models/_5zXUWw_x/";
     let model, webcam, labelContainer, maxPredictions;
 
@@ -22,23 +23,18 @@
       const modelURL = URL + "model.json";
       const metadataURL = URL + "metadata.json";
 
-      try {
-        model = await tmImage.load(modelURL, metadataURL);
-        maxPredictions = model.getTotalClasses();
+      model = await tmImage.load(modelURL, metadataURL);
+      maxPredictions = model.getTotalClasses();
 
-        webcam = new tmImage.Webcam(224, 224, true);
-        await webcam.setup();
-        await webcam.play();
-        window.requestAnimationFrame(loop);
+      webcam = new tmImage.Webcam(224, 224, true);
+      await webcam.setup();
+      await webcam.play();
+      window.requestAnimationFrame(loop);
 
-        document.getElementById("webcam-container").appendChild(webcam.canvas);
-        labelContainer = document.getElementById("label-container");
-        for (let i = 0; i < maxPredictions; i++) {
-          labelContainer.appendChild(document.createElement("div"));
-        }
-      } catch (err) {
-        console.error("เกิดข้อผิดพลาด:", err);
-        alert("เกิดข้อผิดพลาด: " + err.message);
+      document.getElementById("webcam-container").appendChild(webcam.canvas);
+      labelContainer = document.getElementById("label-container");
+      for (let i = 0; i < maxPredictions; i++) {
+        labelContainer.appendChild(document.createElement("div"));
       }
     }
 
@@ -52,7 +48,7 @@
       const prediction = await model.predict(webcam.canvas);
       for (let i = 0; i < maxPredictions; i++) {
         const classPrediction = prediction[i].className + ": " + 
-              (prediction[i].probability * 100).toFixed(2) + "%";
+          (prediction[i].probability * 100).toFixed(2) + "%";
         labelContainer.childNodes[i].innerHTML = classPrediction;
       }
     }
